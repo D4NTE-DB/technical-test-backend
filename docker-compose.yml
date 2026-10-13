@@ -1,0 +1,33 @@
+services:
+  api:
+    build:
+      context: .
+      target: release
+    image: todo-api:latest
+    container_name: todo-api
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_FILE_NAME: /app/data/sqlite.db
+      API_TOKEN: ${API_TOKEN:?Define API_TOKEN en el archivo .env}
+    volumes:
+      - todo-data:/app/data
+    restart: unless-stopped
+
+  # Túnel público opcional: docker compose --profile tunnel up --build
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles: ["tunnel"]
+    command: ["http", "api:3000"]
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    ports:
+      - "4040:4040"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  todo-data:
