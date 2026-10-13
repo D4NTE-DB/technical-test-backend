@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+
+# Base de datos local
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+
+# Entorno (nunca subir secretos)
+.env
+.env.*
+!.env.example
+
+# Build / cobertura / logs
+dist/
+coverage/
+*.log
+
+# Editor / SO
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+# Intentioncalmente retiradas
+skills
+plugins
