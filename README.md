@@ -39,7 +39,7 @@ Edita `.env` y define un `API_TOKEN` propio (mínimo 16 caracteres).
 | `NODE_ENV` | `development` | `development` \| `production` \| `test` |
 | `PORT` | `3000` | Puerto HTTP (en Docker: puerto publicado en el host) |
 | `DB_FILE_NAME` | `data/sqlite.db` | Ruta del archivo SQLite (se crea solo) |
-| `API_TOKEN` | — (obligatorio) | Token Bearer exigido en `/tasks` |
+| `API_TOKEN` | — (obligatorio) | Token Bearer exigido en `/api/v1/tasks` |
 | `NGROK_AUTHTOKEN` | — | Solo para el túnel ngrok en Docker |
 
 > Si `API_TOKEN` falta o es demasiado corto, el servidor no arranca y muestra el error.
@@ -79,16 +79,18 @@ Para probar desde Swagger UI: pulsa **Authorize**, pega el valor de `API_TOKEN` 
 
 ## Endpoints
 
-Todas las rutas `/tasks` requieren `Authorization: Bearer <API_TOKEN>`.
+La API está versionada: las rutas de negocio viven bajo **`/api/v1`** (base: `http://localhost:3000/api/v1`). Las rutas de infraestructura (`/health`, `/doc`, `/ui`) no se versionan. Una futura versión incompatible se publicaría en paralelo como `/api/v2`, sin romper a los clientes de v1.
+
+Todas las rutas `/api/v1/tasks` requieren `Authorization: Bearer <API_TOKEN>`.
 
 | Método | Ruta | Descripción | Éxito | Errores |
 |---|---|---|---|---|
-| GET | `/tasks?completed=true\|false` | Listar (filtro opcional) | 200 | 400, 401 |
-| GET | `/tasks/{id}` | Obtener por ID | 200 | 400, 401, 404 |
-| POST | `/tasks` | Crear | 201 | 400, 401, 415 |
-| PATCH | `/tasks/{id}` | Actualización parcial | 200 | 400, 401, 404, 415 |
-| PUT | `/tasks/{id}` | Reemplazo total | 200 | 400, 401, 404, 415 |
-| DELETE | `/tasks/{id}` | Eliminar | 204 (sin cuerpo) | 400, 401, 404 |
+| GET | `/api/v1/tasks?completed=true\|false` | Listar (filtro opcional) | 200 | 400, 401 |
+| GET | `/api/v1/tasks/{id}` | Obtener por ID | 200 | 400, 401, 404 |
+| POST | `/api/v1/tasks` | Crear | 201 | 400, 401, 415 |
+| PATCH | `/api/v1/tasks/{id}` | Actualización parcial | 200 | 400, 401, 404, 415 |
+| PUT | `/api/v1/tasks/{id}` | Reemplazo total | 200 | 400, 401, 404, 415 |
+| DELETE | `/api/v1/tasks/{id}` | Eliminar | 204 (sin cuerpo) | 400, 401, 404 |
 | GET | `/health` | Estado del servicio (público) | 200 | — |
 
 Reglas de validación: `title` obligatorio, 3–120 caracteres (se recortan espacios); `description` opcional, máx. 1000 caracteres (`null` la borra en PATCH/PUT); `completed` booleano; los cuerpos no admiten campos desconocidos; PATCH exige al menos un campo; `id` debe ser entero positivo.
@@ -112,32 +114,32 @@ Formato de error:
 ```bash
 TOKEN=change-me-super-secret-token   # el valor de tu .env
 
-curl -X POST http://localhost:3000/tasks \
+curl -X POST http://localhost:3000/api/v1/tasks \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"title":"Comprar víveres","description":"Leche y pan"}'
 
-curl "http://localhost:3000/tasks?completed=false" -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:3000/api/v1/tasks?completed=false" -H "Authorization: Bearer $TOKEN"
 
-curl -X PATCH http://localhost:3000/tasks/1 \
+curl -X PATCH http://localhost:3000/api/v1/tasks/1 \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"completed":true}'
 
-curl -X DELETE http://localhost:3000/tasks/1 -H "Authorization: Bearer $TOKEN" -i
+curl -X DELETE http://localhost:3000/api/v1/tasks/1 -H "Authorization: Bearer $TOKEN" -i
 ```
 
 PowerShell:
 
 ```powershell
 $h = @{ Authorization = "Bearer change-me-super-secret-token" }
-Invoke-RestMethod -Method Post http://localhost:3000/tasks -Headers $h -ContentType 'application/json' -Body '{"title":"Comprar víveres"}'
-Invoke-RestMethod "http://localhost:3000/tasks?completed=false" -Headers $h
+Invoke-RestMethod -Method Post http://localhost:3000/api/v1/tasks -Headers $h -ContentType 'application/json' -Body '{"title":"Comprar víveres"}'
+Invoke-RestMethod "http://localhost:3000/api/v1/tasks?completed=false" -Headers $h
 ```
 
 ## Tests y verificación
 
 ```bash
 bun run typecheck   # TypeScript estricto
-bun test            # tests de integración (SQLite en memoria)
+bun test            # 16 tests de integración (SQLite en memoria); cada test explica en español qué verifica
 bun run check       # ambos
 ```
 
@@ -156,7 +158,7 @@ src/
 ├── app.ts                   # Composición de la app (middlewares, routers, docs, errores)
 ├── config/env.ts            # Variables de entorno validadas con Zod
 ├── db/                      # Conexión, esquema Drizzle y runner de migraciones
-├── lib/                     # Fábrica de routers, esquemas comunes, OpenAPI, errores
+├── lib/                     # Prefijo de versión, fábrica de routers, esquemas comunes, OpenAPI, errores
 ├── middleware/              # Autenticación Bearer y manejo global de errores
 └── modules/
     ├── health/              # GET /health
@@ -173,8 +175,10 @@ tests/                       # Tests de integración
 
 ## Decisiones técnicas
 
+- **Versionado por URL (`/api/v1`):** el prefijo se define una sola vez en `src/lib/constants.ts`; permite publicar una v2 incompatible en paralelo sin romper a los clientes existentes.
 - **Contrato como código:** los esquemas Zod son la única fuente de verdad para validar peticiones, tipar respuestas y generar la especificación OpenAPI.
 - **Drizzle ORM + migraciones versionadas:** el esquema TypeScript genera el SQL de `drizzle/`, que se aplica automáticamente en cada arranque (idempotente). Todas las consultas son parametrizadas.
+- **PATCH con lista blanca explícita:** solo se copian los campos enviados (`title`, `description`, `completed`) y se aplican en una única sentencia `UPDATE … RETURNING`, que es atómica, refresca `updated_at` y devuelve la fila tal como quedó en la base de datos.
 - **Timestamps ISO-8601 UTC** (`2026-10-13T20:00:00.000Z`); `updated_at` se actualiza automáticamente en cada modificación.
 - **Nombres de campo del enunciado** (`created_at`, `updated_at`) usados tal cual en el contrato.
 - **Errores homogéneos:** validación (400), no autorizado (401), no encontrado (404), tipo de contenido (415) y error interno (500) comparten la forma `{ success: false, message }`.
