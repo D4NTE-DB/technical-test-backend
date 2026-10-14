@@ -2,6 +2,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
 import { env } from './config/env';
+import { API_V1_PREFIX } from './lib/constants';
 import { createRouter } from './lib/create-router';
 import { configureOpenAPI } from './lib/openapi';
 import { notFound, onError } from './middleware/error-handler';
@@ -17,7 +18,7 @@ export function createApp() {
 
   app.get('/', (c) => c.redirect('/ui'));
   app.route('/', healthRouter);
-  app.route('/tasks', tasksRouter);
+  app.route(`${API_V1_PREFIX}/tasks`, tasksRouter);
 
   configureOpenAPI(app);
 

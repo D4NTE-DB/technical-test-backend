@@ -5,7 +5,7 @@ import * as routes from './task.routes';
 
 const tasksRouter = createRouter();
 
-// Todas las rutas de /tasks requieren token (registrar ANTES de las rutas).
+// Todas las rutas de /api/v1/tasks requieren token (registrar ANTES de las rutas).
 tasksRouter.use('*', bearerAuth);
 
 tasksRouter

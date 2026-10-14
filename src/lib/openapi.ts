@@ -15,7 +15,8 @@ export function configureOpenAPI(app: OpenAPIHono) {
       version: '1.0.0',
       description:
         'API REST para gestionar tareas. Bun + Hono + SQLite (Drizzle ORM). ' +
-        'Todas las rutas `/tasks` requieren `Authorization: Bearer <token>`.',
+        'Versión 1: las rutas de negocio se exponen bajo `/api/v1` y requieren `Authorization: Bearer <token>`. ' +
+        '`/health`, `/doc` y `/ui` son públicas y no se versionan.',
     },
     // URL relativa: Swagger UI usa el mismo origen desde donde se sirve (localhost, Docker o ngrok).
     servers: [{ url: '/', description: 'Servidor actual' }],
