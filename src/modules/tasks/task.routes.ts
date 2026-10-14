@@ -58,6 +58,7 @@ export const createTask = createRoute({
     201: { content: json(TaskSchema), description: 'Tarea creada' },
     400: errorResponses.validation,
     401: errorResponses.unauthorized,
+    415: errorResponses.unsupportedMediaType,
   },
 });
 
@@ -77,6 +78,7 @@ export const patchTask = createRoute({
     400: errorResponses.validation,
     401: errorResponses.unauthorized,
     404: errorResponses.notFound,
+    415: errorResponses.unsupportedMediaType,
   },
 });
 
@@ -96,6 +98,7 @@ export const putTask = createRoute({
     400: errorResponses.validation,
     401: errorResponses.unauthorized,
     404: errorResponses.notFound,
+    415: errorResponses.unsupportedMediaType,
   },
 });
 

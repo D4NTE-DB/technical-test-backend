@@ -47,6 +47,10 @@ export const errorResponses = {
     content: { 'application/json': { schema: ErrorSchema } },
     description: 'La tarea no existe',
   },
+  unsupportedMediaType: {
+    content: { 'application/json': { schema: ErrorSchema } },
+    description: 'El cuerpo debe enviarse con Content-Type: application/json',
+  },
   internal: {
     content: { 'application/json': { schema: ErrorSchema } },
     description: 'Error interno del servidor',
