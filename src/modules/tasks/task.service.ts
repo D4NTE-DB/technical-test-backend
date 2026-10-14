@@ -1,5 +1,5 @@
 import { NotFoundError } from '../../lib/errors';
-import { taskRepository, type TaskFilter } from './task.repository';
+import { taskRepository, type TaskChanges, type TaskFilter } from './task.repository';
 import type { CreateTaskInput, PatchTaskInput, PutTaskInput, Task } from './task.schemas';
 
 const notFound = (id: number) => new NotFoundError(`Tarea con id ${id} no encontrada`);
@@ -24,8 +24,19 @@ export const taskService = {
     });
   },
 
+  /**
+   * Actualización parcial: solo se copian los campos enviados (lista blanca explícita).
+   * Se hace en una única sentencia UPDATE ... RETURNING para que sea atómica, para que
+   * `$onUpdateFn` refresque `updated_at` y para devolver la fila tal como quedó en la BD.
+   * `description: null` es un valor válido (borra la descripción); `undefined` = no enviado.
+   */
   patch(id: number, input: PatchTaskInput): Task {
-    const task = taskRepository.update(id, input);
+    const changes: TaskChanges = {};
+    if (input.title !== undefined) changes.title = input.title;
+    if (input.description !== undefined) changes.description = input.description;
+    if (input.completed !== undefined) changes.completed = input.completed;
+
+    const task = taskRepository.update(id, changes);
     if (!task) throw notFound(id);
     return task;
   },
